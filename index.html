@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Suara - by AnggaPuspa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen">
+
+  <!-- LANDING PAGE -->
+  <section id="landing" class="max-w-4xl mx-auto px-4 py-8 md:py-16">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl md:text-5xl font-semibold mb-4 text-[var(--color-ink)]">
+        Quiz Suara
+      </h1>
+      <p class="text-lg md:text-xl text-[var(--color-muted)] max-w-2xl mx-auto">
+        Latih kecepatan berpikir dengan menjawab pertanyaan menggunakan suara. Jawab dengan "benar" atau "salah" secepat mungkin!
+      </p>
+    </div>
+    
+    <div class="flex justify-center mb-16">
+      <button id="btn-start" class="btn-primary px-12 py-4 rounded-full text-lg font-medium transition-all hover:scale-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[var(--color-secondary)]">
+        Mulai Quiz
+      </button>
+    </div>
+    
+    <div class="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+      <div class="card rounded-2xl p-6">
+        <div class="w-12 h-12 rounded-full  bg-opacity-10 flex items-center justify-center mb-4">
+          <svg class="w-6 h-6 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <h2 class="text-lg font-semibold mb-2">Cepat & Responsif</h2>
+        <p class="text-sm text-[var(--color-muted)]">Jawab dalam 10 detik untuk setiap pertanyaan</p>
+      </div>
+      
+      <div class="card rounded-2xl p-6">
+        <div class="w-12 h-12 rounded-full bg-opacity-10 flex items-center justify-center mb-4">
+          <svg class="w-6 h-6 text-[var(--color-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+          </svg>
+        </div>
+        <h2 class="text-lg font-semibold mb-2">Kontrol Suara</h2>
+        <p class="text-sm text-[var(--color-muted)]">Gunakan mikrofon atau keyboard untuk menjawab</p>
+      </div>
+      
+      <div class="card rounded-2xl p-6">
+        <div class="w-12 h-12 rounded-full bg-opacity-10 flex items-center justify-center mb-4">
+          <svg class="w-6 h-6 text-[var(--color-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <h2 class="text-lg font-semibold mb-2">Lihat Progres</h2>
+        <p class="text-sm text-[var(--color-muted)]">Pantau akurasi dan streak terbaik Anda</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ PAGE -->
+  <section id="quiz" class="hidden max-w-3xl mx-auto px-4 py-8">
+    <!-- Progress -->
+    <div class="mb-6">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm font-medium text-[var(--color-muted)]">
+          Pertanyaan <span id="current-question">1</span> dari <span id="total-questions">5</span>
+        </span>
+        <span class="text-sm font-medium text-[var(--color-muted)]">
+          Skor: <span id="current-score">0</span>
+        </span>
+      </div>
+      <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div id="progress-bar" class="h-full bg-[var(--color-primary)] transition-all duration-300" style="width: 20%"></div>
+      </div>
+    </div>
+    
+    <!-- Question Card -->
+    <div class="card rounded-3xl p-8 mb-6">
+      <!-- Countdown Bar -->
+      <div class="mb-6 -mx-8 -mt-8">
+        <div class="h-1 bg-gray-100 rounded-t-3xl overflow-hidden">
+          <div id="countdown-bar" class="countdown-bar h-full" style="width: 100%"></div>
+        </div>
+        <div class="px-8 pt-6">
+          <span class="text-sm font-medium text-[var(--color-muted)]">
+            Waktu: <span id="countdown-text">10</span> detik
+          </span>
+        </div>
+      </div>
+      
+      <div class="mb-8">
+        <div class="text-sm font-medium text-[var(--color-primary)] mb-3">
+          Pertanyaan #<span id="question-number">1</span>
+        </div>
+        <h2 id="question-text" class="text-2xl md:text-3xl font-semibold leading-tight mb-4">
+          Bumi mengelilingi Matahari
+        </h2>
+        <button id="hint-toggle" class="text-sm text-[var(--color-secondary)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-secondary)] rounded px-2 py-1">
+          Tampilkan Petunjuk
+        </button>
+        <div id="hint-area" class="hidden mt-3 p-4 bg-[var(--color-bg)] rounded-xl">
+          <p id="hint-text" class="text-sm text-[var(--color-muted)]">
+            Pikirkan tentang sistem tata surya kita
+          </p>
+        </div>
+      </div>
+      
+      <!-- Voice Recognition Status -->
+      <div class="mb-6 text-center">
+        <div id="voice-feedback" class="flex justify-center items-center gap-4 mb-2">
+          <div class="text-lg font-medium">Katakan <span class="text-[var(--color-accent)] font-semibold">"BENAR"</span> atau <span class="text-red-500 font-semibold">"SALAH"</span></div>
+        </div>
+        <div id="recognition-status" class="text-sm text-[var(--color-muted)]">
+          Mendengarkan...
+        </div>
+      </div>
+      
+      <!-- Speech Recognition Result Display -->
+      <div id="voice-result-container" class="hidden mb-4 py-3 px-4 rounded-xl text-center bg-gray-100">
+        <div class="font-medium">Terdeteksi: <span id="detected-command" class="font-bold"></span></div>
+      </div>
+    </div>
+    
+    <!-- Mic Control - Now Automatic -->
+    <div class="card rounded-3xl p-8">
+      <div class="text-center mb-4">
+        <h3 class="text-lg font-semibold mb-2">Pengenalan Suara Aktif</h3>
+        <p class="text-sm text-[var(--color-muted)]">Mikrofon akan otomatis diaktifkan untuk menjawab</p>
+      </div>
+      
+      <div class="flex flex-col items-center gap-4">
+        <div id="mic-indicator" 
+             class="w-20 h-20 rounded-full btn-primary mic-active flex items-center justify-center"
+             aria-label="Indikator mikrofon">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+          </svg>
+        </div>
+        
+        <div class="w-full max-w-xs">
+          <div class="mb-2 text-center">
+            <span id="mic-status" class="text-sm font-medium text-[var(--color-muted)]" aria-live="polite">
+              Mikrofon: Aktif
+            </span>
+          </div>
+          <div class="flex justify-center gap-1 h-12 items-end">
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 20%"></div>
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 30%"></div>
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 45%"></div>
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 60%"></div>
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 40%"></div>
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 25%"></div>
+            <div class="audio-meter-bar w-2 bg-gray-200 rounded-t" style="height: 15%"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Hidden Label Container for TensorFlow.js -->
+      <div id="label-container" class="hidden"></div>
+    </div>
+  </section>
+
+  <!-- RESULT PAGE -->
+  <section id="result" class="hidden max-w-2xl mx-auto px-4 py-8 md:py-16">
+    <div class="text-center mb-12">
+      <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-[var(--color-primary)] bg-opacity-10 mb-6">
+        <svg class="w-12 h-12 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-semibold mb-3">Quiz Selesai!</h1>
+      <p class="text-lg text-[var(--color-muted)]">Berikut hasil performa Anda</p>
+    </div>
+    
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+      <div class="card rounded-2xl p-6 text-center">
+        <div class="text-4xl font-semibold text-[var(--color-primary)] mb-2">
+          <span id="final-score">0</span>/<span id="final-total">5</span>
+        </div>
+        <div class="text-sm text-[var(--color-muted)]">Jawaban Benar</div>
+      </div>
+      
+      <div class="card rounded-2xl p-6 text-center">
+        <div class="text-4xl font-semibold text-[var(--color-secondary)] mb-2">
+          <span id="accuracy">0</span>%
+        </div>
+        <div class="text-sm text-[var(--color-muted)]">Akurasi</div>
+      </div>
+      
+      <div class="card rounded-2xl p-6 text-center">
+        <div class="text-4xl font-semibold text-[var(--color-accent)] mb-2">
+          <span id="best-streak">0</span>
+        </div>
+        <div class="text-sm text-[var(--color-muted)]">Streak Terbaik</div>
+      </div>
+    </div>
+    
+    <div class="card rounded-3xl p-8 mb-8">
+      <h2 class="text-xl font-semibold mb-4">Detail Jawaban</h2>
+      <div id="answer-details" class="space-y-3">
+      </div>
+    </div>
+    
+    <div class="flex justify-center">
+      <button id="btn-restart" class="btn-primary px-12 py-4 rounded-full text-lg font-medium transition-all hover:scale-105 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[var(--color-secondary)]">
+        Main Lagi
+      </button>
+    </div>
+  </section>
+
+    <footer class="app-footer mt-16">
+      <div class="max-w-4xl mx-auto px-4 py-6 text-center text-sm md:text-base">
+        <span class="footer-text">Build with</span>
+        <a class="footer-link" href="https://www.anggapuspa.dev/" target="_blank" rel="noopener">anggapuspa</a>
+      </div>
+    </footer>
+
+<script>
+  window.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded');
+    if (typeof tf === 'undefined') {
+      console.error('TensorFlow.js is not loaded!');
+      alert('Error: TensorFlow.js could not be loaded. Please check your internet connection.');
+    } else {
+      console.log('TensorFlow.js is loaded successfully');
+    }
+    
+    if (typeof speechCommands === 'undefined') {
+      console.error('speech-commands library is not loaded!');
+      alert('Error: speech-commands library could not be loaded. Please check your internet connection.');
+    } else {
+      console.log('speech-commands library is loaded successfully');
+    }
+    
+    console.log('Libraries loaded:', { tf: typeof tf !== 'undefined', speechCommands: typeof speechCommands !== 'undefined' });
+  });
+</script>
+<script src="main.js"></script>
+</body>
+</html>

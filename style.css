@@ -1,0 +1,123 @@
+ :root {
+      --color-primary: #FF8A00;
+      --color-secondary: #6C3EF0;
+      --color-accent: #00C2A8;
+      --color-bg: #FFF8F0;
+      --color-card: #FFFFFF;
+      --color-ink: #1A1A1A;
+      --color-muted: #6B7280;
+    }
+    
+    * {
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-ink);
+    }
+    
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: white;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    .btn-primary:hover {
+      background-color: #E67A00;
+    }
+    
+    .btn-secondary {
+      background-color: var(--color-secondary);
+      color: white;
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #5A31D0;
+    }
+    
+    .card {
+      background-color: var(--color-card);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .countdown-bar {
+      background-color: var(--color-accent);
+      transition: width 1s linear;
+    }
+    
+    .audio-meter-bar {
+      background-color: var(--color-accent);
+      transition: height 0.1s ease;
+    }
+    
+    .mic-active {
+      background-color: #DC2626;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .answer-btn {
+      min-height: 56px;
+      transition: all 0.2s;
+    }
+    
+    .answer-btn:focus-visible {
+      outline: 3px solid var(--color-secondary);
+      outline-offset: 2px;
+    }
+    
+    .answer-correct {
+      background-color: #10B981;
+      color: white;
+    }
+    
+    .answer-wrong {
+      background-color: #EF4444;
+      color: white;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    #voice-result-container {
+      transition: all 0.3s ease;
+      animation: pulse-fade 1.5s;
+    }
+    
+    @keyframes pulse-fade {
+      0% { opacity: 0; transform: scale(0.95); }
+      20% { opacity: 1; transform: scale(1.05); }
+      80% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.95); }
+    }
+
+        .app-footer {
+          background: rgba(255, 255, 255, 0.7);
+          -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .footer-text {
+          color: var(--color-muted);
+          margin-right: 0.25rem;
+        }
+
+        .footer-link {
+          color: var(--color-secondary);
+          font-weight: 500;
+          text-decoration: none;
+        }
+
+        .footer-link:hover {
+          text-decoration: underline;
+        }
