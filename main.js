@@ -212,6 +212,7 @@ function generateQuizQuestions(count = QUIZ_LENGTH) {
 
 const pages = {
   landing: document.getElementById('landing'),
+  about: document.getElementById('about-project'),
   quiz: document.getElementById('quiz'),
   result: document.getElementById('result')
 };
@@ -220,7 +221,25 @@ function navigateTo(page) {
   Object.keys(pages).forEach(key => {
     pages[key].classList.add('hidden');
   });
+  
   pages[page].classList.remove('hidden');
+  
+
+  if (page === 'landing') {
+    pages.about.classList.remove('hidden');
+  }
+
+  const navbar = document.querySelector('.navbar');
+  const body = document.body;
+  
+  if (page === 'quiz' || page === 'result') {
+    if (navbar) navbar.style.display = 'none';
+    body.style.paddingTop = '0';
+  } else {
+    if (navbar) navbar.style.display = 'block';
+    body.style.paddingTop = '70px';
+  }
+  
   state.currentPage = page;
 }
 
