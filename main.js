@@ -217,6 +217,110 @@ const pages = {
   result: document.getElementById('result')
 };
 
+const MIC_INDICATOR_CLASSES = [
+  'mic-indicator--idle',
+  'mic-indicator--loading',
+  'mic-indicator--listening',
+  'mic-indicator--muted',
+  'mic-indicator--error'
+];
+
+const MIC_STATE_LABELS = {
+  idle: 'siap digunakan',
+  loading: 'sedang menyiapkan',
+  listening: 'aktif dan mendengarkan',
+  muted: 'tidak aktif',
+  error: 'mengalami kesalahan'
+};
+
+const STATUS_MESSAGE_CLASSES = [
+  'status-message--idle',
+  'status-message--info',
+  'status-message--listening',
+  'status-message--warning',
+  'status-message--error',
+  'status-message--success'
+];
+
+const STATUS_TONE_CLASS = {
+  idle: 'status-message--idle',
+  info: 'status-message--info',
+  listening: 'status-message--listening',
+  success: 'status-message--success',
+  warning: 'status-message--warning',
+  error: 'status-message--error'
+};
+
+const STATUS_TONE_COLOR = {
+  idle: 'var(--color-muted)',
+  info: 'var(--color-muted)',
+  listening: '#16A34A',
+  success: '#16A34A',
+  warning: '#D97706',
+  error: '#EF4444'
+};
+
+function updateMicIndicator(nextState = 'idle', message) {
+  const indicatorElement = document.getElementById('mic-indicator');
+  const micStatusElement = document.getElementById('mic-status');
+  const normalizedState = MIC_STATE_LABELS[nextState] ? nextState : 'idle';
+
+  if (indicatorElement) {
+    MIC_INDICATOR_CLASSES.forEach(cls => indicatorElement.classList.remove(cls));
+    indicatorElement.classList.add(`mic-indicator--${normalizedState}`);
+    indicatorElement.setAttribute('data-state', normalizedState);
+    indicatorElement.setAttribute('aria-label', `Status mikrofon: ${MIC_STATE_LABELS[normalizedState]}`);
+  }
+
+  if (micStatusElement && typeof message === 'string') {
+    micStatusElement.textContent = message;
+  }
+
+  const micIsActive = normalizedState === 'listening';
+  state.micActive = micIsActive;
+  animateAudioMeters(micIsActive);
+}
+
+function setRecognitionStatus(message, tone = 'info') {
+  const statusElement = document.getElementById('recognition-status');
+  if (!statusElement) return;
+
+  const toneKey = STATUS_TONE_CLASS[tone] ? tone : 'info';
+
+  STATUS_MESSAGE_CLASSES.forEach(cls => statusElement.classList.remove(cls));
+  statusElement.classList.add(STATUS_TONE_CLASS[toneKey]);
+  statusElement.classList.add('status-message');
+  statusElement.setAttribute('data-tone', toneKey);
+
+  if (typeof message === 'string') {
+    statusElement.textContent = message;
+  }
+
+  const color = STATUS_TONE_COLOR[toneKey] || STATUS_TONE_COLOR.info;
+  statusElement.style.color = color;
+}
+
+async function ensureMicrophonePermission() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error('Browser tidak mendukung akses mikrofon. Coba gunakan browser yang berbeda.');
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop());
+  } catch (error) {
+    if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+      throw new Error('Izin mikrofon ditolak. Izinkan akses mikrofon di pengaturan browser Anda.');
+    }
+
+    if (error.name === 'NotFoundError' || error.name === 'NotReadableError') {
+      throw new Error('Mikrofon tidak ditemukan atau sedang digunakan oleh aplikasi lain.');
+    }
+
+    throw new Error('Gagal mengakses mikrofon: ' + (error.message || 'Tidak diketahui'));
+  }
+}
+
 function navigateTo(page) {
   Object.keys(pages).forEach(key => {
     pages[key].classList.add('hidden');
@@ -251,12 +355,22 @@ async function startQuiz() {
   navigateTo('quiz');
   loadQuestion();
   startCountdown();
+  updateMicIndicator('loading', 'Mikrofon: Menyiapkan...');
+  setRecognitionStatus('Menyiapkan pengenalan suara...', 'info');
   
   try {
     await initSpeechRecognition();
   } catch (error) {
     console.error("Failed to initialize speech recognition:", error);
-    showSpeechError("Gagal mengaktifkan pengenalan suara. Silakan refresh halaman.");
+    if (state.recognizer) {
+      try {
+        await state.recognizer.stopListening();
+      } catch (stopError) {
+        console.warn('Unable to stop recognizer after failure:', stopError);
+      }
+      state.recognizer = null;
+    }
+    showSpeechError(error.message || "Gagal mengaktifkan pengenalan suara. Silakan refresh halaman.");
   }
 }
 
@@ -277,13 +391,14 @@ function loadQuestion() {
   
   const progress = ((state.currentQuestion + 1) / questions.length) * 100;
   document.getElementById('progress-bar').style.width = progress + '%';
-  try {
-    document.getElementById('voice-result-container').classList.add('hidden');
-    document.getElementById('recognition-status').textContent = 'Mendengarkan...';
-    document.getElementById('recognition-status').classList.remove('text-red-500');
-  } catch (e) {
-    console.log("Voice UI elements not found yet");
+  const voiceContainer = document.getElementById('voice-result-container');
+  if (voiceContainer) {
+    voiceContainer.classList.add('hidden');
   }
+  setRecognitionStatus(
+    state.micActive ? 'Mendengarkan perintah...' : 'Menunggu pengenalan suara aktif...',
+    state.micActive ? 'listening' : 'idle'
+  );
   
   state.timeLeft = 10;
   document.getElementById('countdown-text').textContent = state.timeLeft;
@@ -302,6 +417,7 @@ function startCountdown() {
     
     if (state.timeLeft <= 0) {
       clearInterval(state.countdownInterval);
+      setRecognitionStatus('Waktu habis. Beralih ke pertanyaan berikutnya...', 'warning');
       setTimeout(nextQuestion, 500);
     }
   }, 1000);
@@ -324,6 +440,7 @@ function submitAnswer(userAnswer) {
     correct: q.answer,
     isCorrect
   });
+  setRecognitionStatus('Jawaban diterima. Menyiapkan pertanyaan berikutnya...', 'success');
   
   setTimeout(nextQuestion, 1200);
 }
@@ -388,35 +505,29 @@ async function showResults() {
 }
 
 function showSpeechError(message) {
-  try {
-    const statusElement = document.getElementById('recognition-status');
-    statusElement.textContent = message;
-    statusElement.classList.add('text-red-500');
-    console.error(message);
-  } catch (e) {
-    console.error("Could not display error message:", message);
-  }
+  console.error(message);
+  updateMicIndicator('error', 'Mikrofon: Error');
+  setRecognitionStatus(message, 'error');
 }
 
 async function createSpeechModel() {
+  if (typeof speechCommands === 'undefined') {
+    console.error('Speech Commands library is not available!');
+    throw new Error('Library pengenalan suara tidak tersedia. Pastikan koneksi internet Anda stabil.');
+  }
+
   try {
-    if (typeof speechCommands === 'undefined') {
-      console.error("Speech Commands library is not available!");
-      showSpeechError("Librari pengenalan suara tidak tersedia");
-      return null;
-    }
-    
     console.log("Attempting to load speech model...");
-  const URL = window.location.origin + "/model/";
-  const checkpointURL = URL + "model.json";
-  const metadataURL = URL + "metadata.json";
-    
+    const URL = window.location.origin + "/model/";
+    const checkpointURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
     console.log("Loading model from:", checkpointURL);
     console.log("Loading metadata from:", metadataURL);
 
     const recognizer = speechCommands.create(
-      "BROWSER_FFT", 
-      undefined, 
+      "BROWSER_FFT",
+      undefined,
       checkpointURL,
       metadataURL
     );
@@ -427,73 +538,100 @@ async function createSpeechModel() {
     return recognizer;
   } catch (error) {
     console.error('Error creating speech model:', error);
-    showSpeechError('Gagal memuat model suara: ' + error.message);
-    return null;
+    throw new Error('Gagal memuat model suara. ' + (error.message || 'Tidak diketahui'));
   }
 }
 
 async function initSpeechRecognition() {
   console.log("Initializing speech recognition...");
-  
+
+  updateMicIndicator('loading', 'Mikrofon: Meminta izin...');
+  setRecognitionStatus('Meminta izin mikrofon...', 'warning');
+
   if (state.recognizer) {
     console.log("Stopping previous recognizer...");
-    await state.recognizer.stopListening();
+    try {
+      await state.recognizer.stopListening();
+    } catch (stopError) {
+      console.warn('Failed to stop previous recognizer:', stopError);
+    }
   }
-  
+
+  await ensureMicrophonePermission();
+  setRecognitionStatus('Memuat model suara...', 'info');
+
   state.recognizer = await createSpeechModel();
   if (!state.recognizer) {
-    console.error("Failed to create speech recognizer");
-    return;
+    throw new Error('Model pengenalan suara tidak tersedia.');
   }
-  
+
   const classLabels = state.recognizer.wordLabels();
   console.log('Available commands:', classLabels);
-  
-  state.micActive = true;
-  const statusElement = document.getElementById('mic-status');
-  if (statusElement) statusElement.textContent = 'Mikrofon: Aktif';
-  animateAudioMeters(true);
 
-  state.recognizer.listen(result => {
-    const scores = result.scores;
-    let maxScore = scores[1];
-    let maxIndex = 1;
-    
-    for (let i = 2; i < scores.length; i++) {
-      if (scores[i] > maxScore) {
-        maxScore = scores[i];
-        maxIndex = i;
+  state.voiceCommandCooldown = false;
+  state.lastDetectedCommand = null;
+
+  try {
+    setRecognitionStatus('Mengaktifkan mikrofon...', 'warning');
+    await state.recognizer.listen(result => {
+      const scores = result.scores;
+      let maxScore = scores[1];
+      let maxIndex = 1;
+
+      for (let i = 2; i < scores.length; i++) {
+        if (scores[i] > maxScore) {
+          maxScore = scores[i];
+          maxIndex = i;
+        }
       }
-    }
-    console.log(`Top score: ${classLabels[maxIndex]} (${maxScore.toFixed(2)})`);
-    if (maxScore > 0.75 && !state.voiceCommandCooldown) {
-      const detectedCommand = classLabels[maxIndex];
-      console.log(`Detected command: ${detectedCommand} with score ${maxScore.toFixed(2)}`);
-      handleVoiceCommand(detectedCommand);
-    }
-  }, {
-    includeSpectrogram: true,
-    probabilityThreshold: 0.70,
-    invokeCallbackOnNoiseAndUnknown: true,
-    overlapFactor: 0.50
-  });
+
+      console.log(`Top score: ${classLabels[maxIndex]} (${maxScore.toFixed(2)})`);
+      if (maxScore > 0.75 && !state.voiceCommandCooldown) {
+        const detectedCommand = classLabels[maxIndex];
+        console.log(`Detected command: ${detectedCommand} with score ${maxScore.toFixed(2)}`);
+        handleVoiceCommand(detectedCommand);
+      }
+    }, {
+      includeSpectrogram: true,
+      probabilityThreshold: 0.70,
+      invokeCallbackOnNoiseAndUnknown: true,
+      overlapFactor: 0.50
+    });
+  } catch (listenError) {
+    console.error('Failed to start listening:', listenError);
+    const message = listenError instanceof Error ? listenError.message : String(listenError);
+    throw new Error('Gagal memulai pengenalan suara. ' + (message || ''));
+  }
+
+  updateMicIndicator('listening', 'Mikrofon: Aktif');
+  setRecognitionStatus('Mendengarkan perintah...', 'listening');
 }
 
 function handleVoiceCommand(command) {
-  if (command === 'Background Noise') return;
-  
-  console.log(`Processing command: ${command}`);
-  
-  state.voiceCommandCooldown = true;
-  state.lastDetectedCommand = command;
+  if (!command || command === 'Background Noise') return;
 
-  showDetectedCommand(command);
-  
-  if (command === 'benar') {
-    submitAnswer(true);
-  } else if (command === 'salah') {
-    submitAnswer(false);
+  console.log(`Processing command: ${command}`);
+
+  const normalizedCommand = typeof command === 'string' ? command.toLowerCase() : '';
+
+  if (normalizedCommand !== 'benar' && normalizedCommand !== 'salah') {
+    state.voiceCommandCooldown = true;
+    setRecognitionStatus('Perintah tidak dikenali. Ucapkan "benar" atau "salah".', 'warning');
+    setTimeout(() => {
+      state.voiceCommandCooldown = false;
+      setRecognitionStatus('Mendengarkan perintah...', 'listening');
+    }, 1600);
+    return;
   }
+
+  state.voiceCommandCooldown = true;
+  state.lastDetectedCommand = normalizedCommand;
+
+  showDetectedCommand(normalizedCommand);
+  setRecognitionStatus(`Perintah "${normalizedCommand.toUpperCase()}" terdeteksi`, 'success');
+  updateMicIndicator('listening', 'Mikrofon: Aktif');
+
+  submitAnswer(normalizedCommand === 'benar');
   
   setTimeout(() => {
     state.voiceCommandCooldown = false;
@@ -522,6 +660,10 @@ function hideDetectedCommand() {
     if (container) {
       container.classList.add('hidden');
     }
+    setRecognitionStatus(
+      state.micActive ? 'Mendengarkan perintah...' : 'Menunggu pengenalan suara aktif...',
+      state.micActive ? 'listening' : 'idle'
+    );
   } catch (e) {
     console.error("Error hiding detected command:", e);
   }
@@ -557,14 +699,18 @@ function animateAudioMeters(active) {
 
 async function stopSpeechRecognition() {
   if (state.recognizer) {
-    await state.recognizer.stopListening();
+    try {
+      await state.recognizer.stopListening();
+    } catch (error) {
+      console.warn('Failed to stop recognizer gracefully:', error);
+    }
   }
-  
-  state.micActive = false;
-  const statusElement = document.getElementById('mic-status');
-  if (statusElement) statusElement.textContent = 'Mikrofon: Tidak Aktif';
-  
-  animateAudioMeters(false);
+
+  state.voiceCommandCooldown = false;
+  state.lastDetectedCommand = null;
+
+  updateMicIndicator('muted', 'Mikrofon: Tidak Aktif');
+  setRecognitionStatus('Pengenalan suara dihentikan.', 'idle');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -583,6 +729,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const hint = document.getElementById('hint-area');
     hint.classList.toggle('hidden');
   });
+
+  updateMicIndicator('idle', 'Mikrofon: Belum Aktif');
+  setRecognitionStatus('Mulai kuis untuk mengaktifkan pengenalan suara.', 'idle');
 });
 
 

@@ -223,13 +223,13 @@
           <div class="text-lg font-medium">Katakan <span class="text-[var(--color-accent)] font-semibold">"BENAR"</span>
             atau <span class="text-red-500 font-semibold">"SALAH"</span></div>
         </div>
-        <div id="recognition-status" class="text-sm text-[var(--color-muted)]">
-          Mendengarkan...
+        <div id="recognition-status" class="text-sm text-[var(--color-muted)] status-message status-message--idle" role="status" aria-live="polite">
+          Mulai kuis untuk mengaktifkan pengenalan suara.
         </div>
       </div>
 
       <!-- Speech Recognition Result Display -->
-      <div id="voice-result-container" class="hidden mb-4 py-3 px-4 rounded-xl text-center bg-gray-100">
+      <div id="voice-result-container" class="hidden mb-4 py-3 px-4 rounded-xl text-center bg-gray-100" role="status" aria-live="polite">
         <div class="font-medium">Terdeteksi: <span id="detected-command" class="font-bold"></span></div>
       </div>
     </div>
@@ -242,8 +242,8 @@
       </div>
 
       <div class="flex flex-col items-center gap-4">
-        <div id="mic-indicator" class="w-20 h-20 rounded-full btn-primary mic-active flex items-center justify-center"
-          aria-label="Indikator mikrofon">
+        <div id="mic-indicator" class="w-20 h-20 rounded-full flex items-center justify-center mic-indicator mic-indicator--idle"
+          role="status" aria-live="polite" aria-label="Indikator mikrofon">
           <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z">
@@ -254,7 +254,7 @@
         <div class="w-full max-w-xs">
           <div class="mb-2 text-center">
             <span id="mic-status" class="text-sm font-medium text-[var(--color-muted)]" aria-live="polite">
-              Mikrofon: Aktif
+              Mikrofon: Belum Aktif
             </span>
           </div>
           <div class="flex justify-center gap-1 h-12 items-end">
