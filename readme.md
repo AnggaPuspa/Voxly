@@ -28,7 +28,7 @@ Jika Anda ingin mencoba atau mengembangkannya sendiri, ikuti langkah-langkah ber
 
 1.  **Clone repository ini:**
     ```sh
-    git clone [https://github.com/nama-anda/voxly.git](https://github.com/nama-anda/voxly.git)
+    git clone [git@github.com:AnggaPuspa/Voxly.git](git@github.com:AnggaPuspa/Voxly.git)
     ```
 2.  **Buka folder proyek:**
     ```sh
