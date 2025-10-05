@@ -396,7 +396,7 @@ function loadQuestion() {
     voiceContainer.classList.add('hidden');
   }
   setRecognitionStatus(
-    state.micActive ? 'Mendengarkan perintah...' : 'Menunggu pengenalan suara aktif...',
+    state.micActive ? 'Mendengarkan jawaban...' : 'Menunggu pengenalan suara aktif...',
     state.micActive ? 'listening' : 'idle'
   );
   
@@ -604,7 +604,7 @@ async function initSpeechRecognition() {
   }
 
   updateMicIndicator('listening', 'Mikrofon: Aktif');
-  setRecognitionStatus('Mendengarkan perintah...', 'listening');
+  setRecognitionStatus('Mendengarkan jawaban...', 'listening');
 }
 
 function handleVoiceCommand(command) {
@@ -619,7 +619,7 @@ function handleVoiceCommand(command) {
     setRecognitionStatus('Perintah tidak dikenali. Ucapkan "benar" atau "salah".', 'warning');
     setTimeout(() => {
       state.voiceCommandCooldown = false;
-      setRecognitionStatus('Mendengarkan perintah...', 'listening');
+      setRecognitionStatus('Mendengarkan jawaban...', 'listening');
     }, 1600);
     return;
   }
@@ -661,7 +661,7 @@ function hideDetectedCommand() {
       container.classList.add('hidden');
     }
     setRecognitionStatus(
-      state.micActive ? 'Mendengarkan perintah...' : 'Menunggu pengenalan suara aktif...',
+      state.micActive ? 'Mendengarkan jawaban...' : 'Menunggu pengenalan suara aktif...',
       state.micActive ? 'listening' : 'idle'
     );
   } catch (e) {
